@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SafeRoute — Navigate Safely</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;0,900;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">♀</div>
+      <div>
+        <div class="brand-name">SafeRoute</div>
+        <div class="brand-tagline">for every woman</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">From</div>
+      <input type="text" id="origin" placeholder="Your location..." />
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">To</div>
+      <input type="text" id="destination" placeholder="Where are you going?" />
+    </div>
+
+    <button id="find-btn" onclick="findSafeRoute()">
+      <span id="btn-text">Find Safe Route</span>
+      <div id="spinner" class="spinner hidden"></div>
+    </button>
+
+    <!-- Safety Score -->
+    <div class="safety-card hidden" id="safety-card">
+      <div class="safety-header">Route Safety Score</div>
+      <div class="safety-score-wrap">
+        <svg class="ring-svg" viewBox="0 0 100 100">
+          <circle class="ring-bg" cx="50" cy="50" r="40"/>
+          <circle class="ring-fill" id="ring-fill" cx="50" cy="50" r="40"
+            stroke-dasharray="251.2"
+            stroke-dashoffset="251.2"/>
+        </svg>
+        <div class="safety-score-text">
+          <span id="score-num">--</span>
+          <span class="score-label">/100</span>
+        </div>
+      </div>
+      <div class="safety-status" id="safety-status">Calculating...</div>
+    </div>
+
+    <!-- Route Info -->
+    <div class="route-info hidden" id="route-info">
+      <div class="info-row">
+        <span class="info-icon">⏱</span>
+        <span id="duration-text">--</span>
+      </div>
+      <div class="info-row">
+        <span class="info-icon">📍</span>
+        <span id="distance-text">--</span>
+      </div>
+      <div class="info-row">
+        <span class="info-icon">🕐</span>
+        <span id="time-text">--</span>
+      </div>
+      <button id="nav-btn" onclick="startNavigation(currentRoute)" style="width: 100%; margin-top: 12px; padding: 10px; background: linear-gradient(135deg, #52b788, #74d3a0); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">
+        🧭 Start Navigation
+      </button>
+    </div>
+
+    <!-- Safety Tips -->
+    <div class="tips-section hidden" id="tips-section">
+      <div class="tips-title">Safety Tips</div>
+      <div class="tips-list" id="tips-list"></div>
+    </div>
+
+    <!-- Community Reports -->
+    <div class="community-section">
+      <div class="community-title">Community Reports</div>
+      <button class="report-btn" onclick="openReportModal()">+ Report Unsafe Area</button>
+      <div class="reports-feed" id="reports-feed">
+        <div class="report-item">
+          <div class="report-dot red"></div>
+          <div>
+            <div class="report-place">MG Road, Delhi</div>
+            <div class="report-desc">Poor lighting at night — 2h ago</div>
+          </div>
+        </div>
+        <div class="report-item">
+          <div class="report-dot orange"></div>
+          <div>
+            <div class="report-place">Koramangala, Bangalore</div>
+            <div class="report-desc">Isolated stretch near park — 5h ago</div>
+          </div>
+        </div>
+        <div class="report-item">
+          <div class="report-dot green"></div>
+          <div>
+            <div class="report-place">Bandra West, Mumbai</div>
+            <div class="report-desc">Well lit, busy street ✓ — 1d ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sos-strip">
+      <button class="sos-btn" onclick="triggerSOS()">🆘 SOS — Share My Location</button>
+    </div>
+  </aside>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <!-- REPORT MODAL -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-title">Report Unsafe Area</div>
+      <input type="text" id="report-location" placeholder="Location name or address..." />
+      <select id="report-type">
+        <option value="">Select issue type...</option>
+        <option>Poor lighting</option>
+        <option>Isolated area</option>
+        <option>Harassment reported</option>
+        <option>No footpath</option>
+        <option>Unsafe at night</option>
+        <option>Other</option>
+      </select>
+      <textarea id="report-desc" placeholder="Describe what you experienced..."></textarea>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeReportModal()">Cancel</button>
+        <button class="modal-submit" onclick="submitReport()">Submit Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOS MODAL -->
+  <div class="modal-overlay hidden" id="sos-modal">
+    <div class="modal sos-modal-inner">
+      <div class="sos-icon">🆘</div>
+      <div class="modal-title">SOS Activated</div>
+      <p class="sos-text">Your live location has been copied. Share it immediately with a trusted contact.</p>
+      <div class="sos-location" id="sos-location">Fetching location...</div>
+      <button class="modal-submit" onclick="closeSOS()">OK, I'm Safe</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast hidden" id="toast"></div>
+
+  <!-- Leaflet Map -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
